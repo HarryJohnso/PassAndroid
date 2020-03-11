@@ -2,11 +2,11 @@
 <resources>
     <string name="app_name">"PassAndroid"</string>
     <string name="logo">"logo"</string>
-    <string name="menu_map">"show on map"</string>
-    <string name="menu_delete">"delete"</string>
-    <string name="menu_share">"share"</string>
-    <string name="menu_print">"print"</string>
-    <string name="menu_edit">"edit"</string>
+    <string name="menu_map">Show on map</string>
+    <string name="menu_delete">Delete</string>
+    <string name="menu_share">Share</string>
+    <string name="menu_print">Print</string>
+    <string name="menu_edit">Edit</string>
     <string name="barcode">"barcode"</string>
     <string name="help_label">"Help"</string>
 <string name="help_content"><![CDATA[
@@ -46,7 +46,7 @@ and <a href=\'https://github.com/irgendwr\'>Jonas Bögle</a>
 for pull-requests!
 
 <h1>Feedback</h1>
-Give feedback in the <a href=\'https://plus.google.com/communities/116353894782342292067\'>Google+ Community</a> or you can drop the <a href=\'mailto:ligi@ligi.de\'>author a mail.</a>
+Give feedback via email <a href=\'mailto:ligi@ligi.de\'> to the author.</a>
 If you like the app rate it on <a href=\'https://play.google.com/store/apps/details?id=org.ligi.ticketviewer\'>Google Play</a>.
 I also would love to hear stories about where you used this app.
 
@@ -96,7 +96,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWIS
     <string name="pass_to_calendar">"to Calendar"</string>
     <string name="invalid_passbook_title">Invalid Passbook</string>
     <string name="preparing_pass">Preparing Pass</string>
-    <string name="please_wait">please wait - shouldn\'t be long</string>
+    <string name="please_wait">Importing the pass - please wait a bit</string>
     <string name="passbook_is_shared_subject">a Passbook is shared with you</string>
     <string name="passbook_share_chooser_title">How to send Pass?</string>
     <string name="dialog_delete_confirm_text">Do you really want to delete this passbook?</string>
@@ -132,9 +132,6 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWIS
     <string name="found__pass">And %d more</string>
     <string name="scan_finished_dialog_title">Scan finished.</string>
     <string name="scan_finished_dialog_text">found %d passes</string>
-    <string name="scan_progressdialog_title">Searching…</string>
-    <string name="scan_progressdialog_message">Please wait.</string>
-    <string name="scan_dialog_send_background_button">background</string>
     <string name="emtytrash_label">empty trash</string>
     <string name="barcode_edit_hint_alternative_message">alternative Message</string>
     <string name="barcode_edit_random">random</string>
@@ -219,6 +216,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWIS
 
     <string name="error_no_permission_msg">Need permission to import pass</string>
     <string name="error_no_permission_title">Permission Error</string>
+    <string name="scan_pass_message">Scanning for passes. Please wait.</string>
 
 
 </resources>

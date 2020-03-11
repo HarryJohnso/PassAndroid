@@ -3,35 +3,30 @@ package org.ligi.passandroid.ui
 import android.Manifest
 import android.annotation.TargetApi
 import android.app.Activity
-import android.app.ProgressDialog
 import android.content.ActivityNotFoundException
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
-import androidx.core.view.GravityCompat
-import androidx.viewpager.widget.ViewPager
-import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.appcompat.app.AlertDialog
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
+import android.view.View.GONE
 import android.view.View.VISIBLE
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.core.view.GravityCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.viewpager.widget.ViewPager
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.pass_list.*
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import org.ligi.kaxt.setButton
+import kotlinx.coroutines.launch
 import org.ligi.kaxt.startActivityFromClass
 import org.ligi.kaxt.startActivityFromURL
 import org.ligi.passandroid.R
-import org.ligi.passandroid.events.PassStoreChangeEvent
-import org.ligi.passandroid.events.ScanFinishedEvent
-import org.ligi.passandroid.events.ScanProgressEvent
 import org.ligi.passandroid.functions.createAndAddEmptyPass
 import org.ligi.passandroid.model.PassStoreProjection
 import org.ligi.passandroid.model.State
+import org.ligi.passandroid.scan.PassScanActivity
 import org.ligi.snackengage.SnackEngage
 import org.ligi.snackengage.snacks.BaseSnack
 import org.ligi.snackengage.snacks.DefaultRateSnack
@@ -51,25 +46,7 @@ class PassListActivity : PassAndroidActivity() {
     private val drawerToggle by lazy { ActionBarDrawerToggle(this, drawer_layout, R.string.drawer_open, R.string.drawer_close) }
 
     private val adapter by lazy { PassTopicFragmentPagerAdapter(passStore.classifier, supportFragmentManager) }
-    private val pd by lazy { ProgressDialog(this) }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onScanProgress(event: ScanProgressEvent) {
-        if (pd.isShowing) {
-            pd.setMessage(event.message)
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onScanFinished(event: ScanFinishedEvent) {
-
-        if (pd.isShowing) {
-            val message = getString(R.string.scan_finished_dialog_text, event.foundPasses.size)
-            pd.dismiss()
-            AlertDialog.Builder(this@PassListActivity).setTitle(R.string.scan_finished_dialog_title).setMessage(message).setPositiveButton(android.R.string.ok, null).show()
-        }
-
-    }
 
     @TargetApi(16)
     @OnPermissionDenied(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -80,22 +57,7 @@ class PassListActivity : PassAndroidActivity() {
 
     @TargetApi(16)
     @NeedsPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-    fun scan() {
-        val intent = Intent(this, SearchPassesIntentService::class.java)
-        startService(intent)
-
-        pd.setTitle(R.string.scan_progressdialog_title)
-        pd.setMessage(getString(R.string.scan_progressdialog_message))
-        pd.setCancelable(false)
-        pd.isIndeterminate = true
-        pd.setButton(DialogInterface.BUTTON_NEUTRAL, R.string.scan_dialog_send_background_button) {
-            this@PassListActivity.finish()
-        }
-        pd.setButton(DialogInterface.BUTTON_POSITIVE, android.R.string.cancel) {
-            stopService(intent)
-        }
-        pd.show()
-    }
+    fun scan() = startActivity(Intent(this, PassScanActivity::class.java))
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -116,6 +78,7 @@ class PassListActivity : PassAndroidActivity() {
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+        super.onActivityResult(requestCode, resultCode, resultData)
         if (requestCode == OPEN_FILE_READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             if (resultData != null) {
                 val targetIntent = Intent(this, PassImportActivity::class.java)
@@ -171,7 +134,7 @@ class PassListActivity : PassAndroidActivity() {
         })
         passStore.syncPassStoreWithClassifier(getString(R.string.topic_new))
 
-        onPassStoreChangeEvent(null)
+        refresh()
 
         fab_action_create_pass.setOnClickListener {
             val pass = createAndAddEmptyPass(passStore, resources)
@@ -204,9 +167,29 @@ class PassListActivity : PassAndroidActivity() {
             }
             fab_action_open_file.visibility = VISIBLE
         }
+
+        lifecycleScope.launch {
+            for (update in passStore.updateChannel.openSubscription()) {
+                navigationView.passStoreUpdate()
+
+               refresh()
+            }
+
+
+        }
     }
 
+    fun refresh() {
+        adapter.notifyDataSetChanged()
 
+        setupWithViewPagerIfNeeded()
+
+        invalidateOptionsMenu()
+        val empty = passStore.classifier.topicByIdMap.isEmpty()
+        emptyView.visibility = if (empty) VISIBLE else GONE
+        val onlyDefaultTopicExists = passStore.classifier.getTopics().all { it == getString(R.string.topic_new) }
+        tab_layout.visibility = if (onlyDefaultTopicExists) GONE else VISIBLE
+    }
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         R.id.menu_help -> {
             startActivityFromClass(HelpActivity::class.java)
@@ -226,7 +209,7 @@ class PassListActivity : PassAndroidActivity() {
                         for (pass in passStoreProjection.passList) {
                             passStore.deletePassWithId(pass.id)
                         }
-            }.setNegativeButton(android.R.string.cancel, null).show()
+                    }.setNegativeButton(android.R.string.cancel, null).show()
             true
         }
         else -> drawerToggle.onOptionsItemSelected(item) || super.onOptionsItemSelected(item)
@@ -235,10 +218,8 @@ class PassListActivity : PassAndroidActivity() {
     override fun onResume() {
         super.onResume()
 
-        bus.register(this)
-
         adapter.notifyDataSetChanged()
-        onPassStoreChangeEvent(null)
+        refresh()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
@@ -259,25 +240,6 @@ class PassListActivity : PassAndroidActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         drawerToggle.onConfigurationChanged(newConfig)
-    }
-
-    override fun onPause() {
-        bus.unregister(this)
-        super.onPause()
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onPassStoreChangeEvent(passStoreChangeEvent: PassStoreChangeEvent?) {
-        adapter.notifyDataSetChanged()
-
-        setupWithViewPagerIfNeeded()
-
-        invalidateOptionsMenu()
-
-        val empty = passStore.classifier.topicByIdMap.isEmpty()
-        emptyView.visibility = if (empty) View.VISIBLE else View.GONE
-        val onlyDefaultTopicExists = passStore.classifier.getTopics().all { it == getString(R.string.topic_new) }
-        tab_layout.visibility = if (onlyDefaultTopicExists) View.GONE else View.VISIBLE
     }
 
     private fun setupWithViewPagerIfNeeded() {

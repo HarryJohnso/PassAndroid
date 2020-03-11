@@ -1,26 +1,22 @@
 package org.ligi.passandroid.ui
 
 import android.os.Bundle
-import androidx.annotation.VisibleForTesting
-import androidx.fragment.app.Fragment
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.ViewHolder
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.ItemTouchHelper.*
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.github.salomonbrys.kodein.instance
+import androidx.annotation.VisibleForTesting
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.ItemTouchHelper.*
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kotlinx.android.synthetic.main.pass_recycler.view.*
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import org.ligi.passandroid.App
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.ligi.passandroid.R
-import org.ligi.passandroid.events.PassStoreChangeEvent
-import org.ligi.passandroid.events.ScanFinishedEvent
 import org.ligi.passandroid.functions.moveWithUndoSnackbar
 import org.ligi.passandroid.model.PassStore
 import org.ligi.passandroid.model.PassStoreProjection
@@ -28,13 +24,11 @@ import org.ligi.passandroid.model.Settings
 
 class PassListFragment : Fragment() {
 
-
     private lateinit var passStoreProjection: PassStoreProjection
     private lateinit var adapter: PassAdapter
 
-    val passStore: PassStore = App.kodein.instance()
-    val settings: Settings = App.kodein.instance()
-    val bus: EventBus = App.kodein.instance()
+    val passStore: PassStore by inject()
+    val settings: Settings by inject()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val inflate = inflater.inflate(R.layout.pass_recycler, container, false)
@@ -59,7 +53,12 @@ class PassListFragment : Fragment() {
         val itemTouchHelper = ItemTouchHelper(simpleItemTouchCallback)
         itemTouchHelper.attachToRecyclerView(inflate.pass_recyclerview)
 
-        bus.register(this)
+        lifecycleScope.launch {
+            for (update in passStore.updateChannel.openSubscription()) {
+                passStoreProjection.refresh()
+                adapter.notifyDataSetChanged()
+            }
+        }
         return inflate
     }
 
@@ -75,24 +74,6 @@ class PassListFragment : Fragment() {
                 MoveToNewTopicUI(it, passStore, pass).show()
             }
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        bus.unregister(this)
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onPassStoreChangeEvent(passStoreChangeEvent: PassStoreChangeEvent) {
-        passStoreProjection.refresh()
-        adapter.notifyDataSetChanged()
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onScanFinishedEvent(scanFinishedEvent: ScanFinishedEvent) {
-        passStoreProjection.refresh()
-        adapter.notifyDataSetChanged()
-
     }
 
     companion object {
