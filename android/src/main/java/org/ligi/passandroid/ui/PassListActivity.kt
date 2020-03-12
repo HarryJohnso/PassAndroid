@@ -6,12 +6,15 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
+import android.widget.TextView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.GravityCompat
@@ -66,15 +69,22 @@ class PassListActivity : PassAndroidActivity() {
 
     @TargetApi(VERSION_STARTING_TO_SUPPORT_STORAGE_FRAMEWORK)
     internal fun onAddOpenFileClick() {
-        try {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent.type = "*/*" // tried with octet stream - no use
-            startActivityForResult(intent, OPEN_FILE_READ_REQUEST_CODE)
-        } catch (e: ActivityNotFoundException) {
-            Snackbar.make(fam, "Unavailable", Snackbar.LENGTH_LONG).show()
-        }
+//        try {
+//            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+//            intent.addCategory(Intent.CATEGORY_OPENABLE)
+//            intent.type = "*/*" // tried with octet stream - no use
+//            startActivityForResult(intent, OPEN_FILE_READ_REQUEST_CODE)
+//        } catch (e: ActivityNotFoundException) {
+//            Snackbar.make(fam, "Unavailable", Snackbar.LENGTH_LONG).show()
+//        }
 
+        // This is to demonstrate the coloured snackbars
+        val snackbar: Snackbar = Snackbar.make(fam, "Unavailable", Snackbar.LENGTH_LONG)
+        val snackBarView: View = snackbar.view
+        snackBarView.setBackgroundColor(Color.rgb(232,232,232))
+        val textView: TextView = snackBarView.findViewById(R.id.snackbar_text)
+        textView.setTextColor(Color.BLACK)
+        snackbar.show()
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
